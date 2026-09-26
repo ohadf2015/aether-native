@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: aether/apps/mobile/package-lock.json
 
@@ -39,7 +39,13 @@ jobs:
 
       - name: install
         working-directory: aether/apps/mobile
-        run: npm ci
+        run: |
+          for i in 1 2 3; do
+            npm ci && exit 0
+            echo "npm ci attempt $i failed, retrying"
+            sleep 20
+          done
+          exit 1
 
       - name: prebuild
         working-directory: aether/apps/mobile
