@@ -1,0 +1,64 @@
+name: android-apk
+
+# Hosted runners on the private aether repo are billing-refused.
+# This public repo builds a sideload APK from ohadf2015/aether@main.
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [build]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: checkout aether
+        uses: actions/checkout@v4
+        with:
+          repository: ohadf2015/aether
+          token: ${{ secrets.AETHER_CLONE_TOKEN }}
+          path: aether
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: aether/apps/mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: install
+        working-directory: aether/apps/mobile
+        run: npm ci
+
+      - name: prebuild
+        working-directory: aether/apps/mobile
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: assemble
+        working-directory: aether/apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aether-teammate-debug
+          path: aether/apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Aether teammate Android ${{ github.run_number }}
+          files: aether/apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          body: Sideload debug APK of ai.aether.teammate from ohadf2015/aether main. Not a Play Store build.
