@@ -34,7 +34,8 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      - name: accept android licenses
+        run: yes | sdkmanager --licenses >/dev/null || true
 
       - name: install
         working-directory: aether/apps/mobile
